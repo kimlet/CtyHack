@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>login</title>
+
+    <link href="./jquery/jquery.mobile-1.4.5.min.css" rel="stylesheet" />
+    <script src="./jquery/jquery-1.9.1.min.js"></script>
+    <script src="./jquery/jquery.mobile-1.4.5.min.js"></script>
+    <script scr="./jquery/global.js"></script>
+    <style>
+    :not(input):not(textarea),
+    :not(input):not(textarea)::after,
+    :not(input):not(textarea)::before {
+        -webkit-user-select: none;
+        user-select: none;
+        cursor: default;
+    }
+    input, button, textarea, :focus {
+        outline: none; // You should add some other style for :focus to help UX/a11y
+    }
+    </style>
+    <script>
+    $(function(){
+      var token;
+      var userId;
+      var courseId;
+      var checkoutTimes = 0;
+      $("#btnLogin").click(function(){
+        $.mobile.loading("show");
+        var _email = $("#email").val();
+        var _password = $("#password").val();
+
+        $("#goToAutoCheckout").trigger("onClick");
+
+        $.post(LOGIN_URL, {email: _email, password: _password})
+          .done(function(data){
+            $.mobile.loading("hide");
+            console.log(data);
+            if (data.status) {
+              token = data.accessToken;
+              userId = data.user_id;
+              const cookieToken = {url: BASE_URL, name: "token", value: token};
+              const cookieUserId = {url: BASE_URL, name: "userId", value: userId};
+
+              session.defaultSession.cookies.set(cookieUserId, (error) =>{})
+              session.defaultSession.cookies.set(cookieToken, (error) => {
+                if (error) {
+                  console.error(error);
+                  dialog.showErrorBox('提示', error);
+                }else{
+                  console.log("save cookie success");
+
+                  var href = $('#goToAutoCheckout').attr('href');
+                  window.location.href = href;
+                }
+              })
+            }else{
+              dialog.showErrorBox('提示', data.msg)
+            }
+          });
+      });
+
+      $.mobile.document.on( "pageshow", "#autoCheckout", function() {
+        $(function(){
+          if (!token) {
+            var href = $('#goToLogin').attr('href');
+            window.location.href = href;
+          }else {
+            getCourseList();
+          }
+        });
+      });
+
+      $("#flip-switch").change(function(){
+        console.log($(this).val());
+        if ($(this).val() == "on") {
+          getRollcall(true);
+        }
+      });
+
+      function getCourseList(){
+        $.post(GET_COURSE_LIST, {user_id: userId, accessToken:token})
+          .done(function(data){
+            if (data.status) {
+              var semesters = data.semesters;
+              if (semesters && semesters.length > 0) {
+                var courses = semesters[0].courses;
+                if(courses && courses.length > 0){
+                  courseId = courses[0].course_id;
+                  var courseName = courses[0].name;
+                  $("#course").text(courseName);
+                  getRollcall(false);
+                }
+              }
+            }
+            console.log(data);
+        });
+      }
+      function getRollcall(autoCheckout=true) {
+        $.post(GET_ROLL_CALL, {user_id: userId, accessToken:token, course_id: courseId})
+          .done(function(data){
+            if (data.status) {
+              var rollCallId = data.rollcall.id;
+
+              var lastTimestamp = data.rollcall.record.timestamp;
+              $("#lastCheckoutTime").text("上次签到时间: "+lastTimestamp);
+
+              if (autoCheckout) {
+                makeRollcall(rollCallId);
+              }
+            }
+            console.log(data);
+        });
+      }
+
+      function makeRollcall(rollCallId){
+        $.post(MAKE_ROLLCALL, {user_id: userId, accessToken:token, rollcall_id: rollCallId})
+          .done(function(data){
+            if (data.status) {
+              $("#checkoutStatus").text("签到成功！");
+            }else{
+              checkoutTimes++;
+              $("#checkoutStatus").html("已尝试签到<b>"+checkoutTimes+"</b>次");
+              if($("#flip-switch").val() == "on"){
+                setTimeout(getRollcall, DELAY);
+              }
+            }
+            console.log(data);
+        });
+      }
+
+
+
+    });
+    </script>
+  </head>
+  <body>
+    <div data-role="page" id="login">
+
+	    <div role="main" class="ui-content">
+        <h3 style="width:100%; text-align:center">Welcome</h3>
+        <p style="color:#A9A9A9; font-size:12px; width:100%; text-align:center">请使用<b>出题优</b>的账号密码登录</p>
+        <input type="text" name="email" id="email" value="" placeholder="E-mail">
+        <input type="password" data-clear-btn="true" name="password" id="password" value="" placeholder="password">
+        <button id="btnLogin" class="ui-btn ui-corner-all">登录</button>
+        <a href="#autoCheckout" id="goToAutoCheckout"></a>
+      </div>
+    </div>
+
+    <div data-role="page" id="autoCheckout" style="text-align: center">
+        <div role="main" class="ui-content">
+          <h3 id="course">正在加载课程...</h3>
+
+
+          <select name="flip-switch" id="flip-switch" data-role="slider">
+            <option value="off">关闭</option>
+            <option value="on">开启</option>
+          </select>
+          <p id="lastCheckoutTime" style="color:#A9A9A9; font-size:12px;"></p>
+          <p id="checkoutStatus" style="color:#FF6600; font-size:12px;"></p>
+          <a id="goToLogin" href="#login"></a>
+        </div>
+    </div>
+
+    <p style="position:absolute; bottom:20px; width:100%; text-align:center; color:#a8a8a8">@kim</p>
+
+  </body>
+
+  <script>
+
+    const BASE_URL = "http://cty.zuvio.com.cn/app_v2/";
+    const LOGIN_URL = BASE_URL + "login";
+    const MAKE_ROLLCALL = BASE_URL + "makeRollcall";
+    const GET_COURSE_LIST = BASE_URL + "getCourseList";
+    const GET_ROLL_CALL = BASE_URL + "getRollcall";
+    const {dialog, session, BrowserWindow} = require('electron').remote;
+    const path = require('path');
+    const DELAY = 10000;
+
+    function getUserId(callback) {
+      // Query all cookies associated with a specific url.
+      session.defaultSession.cookies.get({url: BASE_URL, name: "token"}, (error, cookies) => {
+          if (cookies && cookies.length>0) {
+              var token = cookies[0].value;
+              console.log(token);
+              callback(token);
+          }
+
+      })
+    }
+
+    // console.log(path);
+  </script>
+</html>

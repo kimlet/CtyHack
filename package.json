@@ -1,0 +1,27 @@
+{
+  "name": "ctyhack",
+  "productName": "迟到了么",
+  "version": "1.0.0",
+  "description": "迟到别叫妈，叫迟到了么",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "keywords": [
+    "Electron",
+    "quick",
+    "start",
+    "tutorial",
+    "demo"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kimlet/CtyHack.git"
+  },
+  "author": "GitHub",
+  "license": "CC0-1.0",
+  "devDependencies": {
+    "electron": "^1.4.1",
+    "electron-packager": "^8.3.0"
+  }
+}
