@@ -103,7 +103,7 @@
             if (data.status) {
               var rollCallId = data.rollcall.id;
 
-              var lastTimestamp = data.rollcall.record.timestamp;
+              var lastTimestamp = data.rollcall.name;
               $("#lastCheckoutTime").text("上次签到时间: "+lastTimestamp);
 
               if (autoCheckout) {
