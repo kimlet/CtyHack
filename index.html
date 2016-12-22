@@ -101,14 +101,20 @@
         $.post(GET_ROLL_CALL, {user_id: userId, accessToken:token, course_id: courseId})
           .done(function(data){
             if (data.status) {
-              var rollCallId = data.rollcall.id;
+              if (data.rollcall) {
+                var rollCallId = data.rollcall.id;
 
-              var lastTimestamp = data.rollcall.name;
-              $("#lastCheckoutTime").text("上次签到时间: "+lastTimestamp);
-
-              if (autoCheckout) {
-                makeRollcall(rollCallId);
+                var lastTimestamp = data.rollcall.name;
+                $("#lastCheckoutTime").text("上次签到时间: "+lastTimestamp);
+                if (autoCheckout) {
+                  makeRollcall(rollCallId);
+                }                
+              }else{
+                if (autoCheckout) {
+                  setTimeout(getRollcall, DELAY);
+                }
               }
+
             }
             console.log(data);
         });
